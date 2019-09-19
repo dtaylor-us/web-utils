@@ -1,16 +1,22 @@
 (ns core
+  (:require-macros [utils.macros :as m])
   (:require [cljs.nodejs :as nodejs]
             [taoensso.timbre :as log]
-            ["morgan" :as logger]
-            [util.os :as os]
             [express.sugar :as ex]
             [express.web-api :as web]
             [endpoints :as ep]
-            [routing :refer [routing-data]]))
+            [routing :refer [routing-data]]
+            ["morgan" :as logger]
+            ["serve-static" :as serve-static]
+            ["xhr2" :as xhr2]
+            ["body-parser" :as body-parser]
+            ["cookie-parser" :as cookie-parser]
+            ["csurf" :as csurf]
+            ["helmet" :as helmet]))
 
 (nodejs/enable-util-print!)
 
-(set! js/XMLHttpRequest (nodejs/require "xhr2"))
+(set! js/XMLHttpRequest xhr2)
 
 (defmulti handle (fn [req-data] (:endpoint req-data)))
 
@@ -47,16 +53,21 @@
    handle))
 
 (defn main []
-  (let [staticFolder (if-let [STATIC (os/env "STATIC")] STATIC "static")
-        portNumber (if-let [PORT (os/env "PORT")] PORT 8080)]
+  (let [staticFolder (if-let [STATIC (m/env-var "STATIC")] STATIC "static")
+        portNumber (if-let [PORT (m/env-var "PORT")] PORT 8080)]
     (log/debug "Static Folder: " staticFolder)
     (log/debug "Port Number: " portNumber)
     (-> (ex/app)
-        (ex/static staticFolder)
-        ;;(ex/static (if-let [STATIC (os/env "STATIC")] STATIC "static") "/public")
+        (ex/with-middleware (serve-static staticFolder (clj->js {:index false})))
+        (ex/with-middleware (helmet))
         (ex/with-middleware (logger "combined")) ; Logger
+        (ex/with-middleware (body-parser/json)) ;; support json encoded bodies
+        (ex/with-middleware (body-parser/urlencoded (clj->js {:extended true}))) ;; support encoded bodies
+        (ex/with-middleware (cookie-parser))
+        (ex/with-middleware (csurf (clj->js {:cookie true})))
         (ex/with-middleware "/" routes)
         (ex/listen portNumber))
     ))
 
 (set! *main-cli-fn* main)
+
