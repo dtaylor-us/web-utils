@@ -4,6 +4,8 @@
             [taoensso.timbre :as log]
             [express.sugar :as ex]
             [express.web-api :as web]
+            [mongoose.sugar :as mg]
+            [mongoose.backend :as db]
             [endpoints :as ep]
             [routing :refer [routing-data]]
             ["morgan" :as logger]
@@ -52,6 +54,9 @@
    routing-data
    handle))
 
+(defn callback [f]
+  f)
+
 (defn main []
   (let [staticFolder (if-let [STATIC (m/env-var "STATIC")] STATIC "static")
         portNumber (if-let [PORT (m/env-var "PORT")] PORT 8080)]
@@ -67,6 +72,12 @@
         (ex/with-middleware (csurf (clj->js {:cookie true})))
         (ex/with-middleware "/" routes)
         (ex/listen portNumber))
+    (do
+      (mg/connect "mongodb+srv://admin:50-Dt-20@clustered-6gtp5.gcp.mongodb.net/test?retryWrites=true&w=majority"
+                  (clj->js {:useNewUrlParser true :useUnifiedTopology true}))
+      (-> (mg/db)
+          (mg/on "error" (fn [] (log/debug "connection error")))
+          (mg/once "open" (fn [] (log/debug "connection success")))))
     ))
 
 (set! *main-cli-fn* main)
