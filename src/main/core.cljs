@@ -70,11 +70,7 @@
         (ex/with-middleware (csurf (clj->js {:cookie true})))
         (ex/with-middleware "/" routes)
         (ex/listen portNumber))
-    (do
-      (mg/connect mongo-uri (clj->js {:useNewUrlParser true :useUnifiedTopology true}))
-      (-> (mg/db)
-          (mg/on "error" (fn [] (log/debug "ERROR::: Connection to data source could not be established.")))
-          (mg/once "open" (fn [] (db/connection-handler)))))))
+    (db/connect mongo-uri)))
 
 (set! *main-cli-fn* main)
 
