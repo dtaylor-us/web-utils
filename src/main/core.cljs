@@ -5,7 +5,7 @@
             [express.sugar :as ex]
             [express.web-api :as web]
             [mongoose.sugar :as mg]
-            [mongoose.backend :as db]
+            [mongoose.db :as db]
             [endpoints :as ep]
             [routing :refer [routing-data]]
             ["morgan" :as logger]
@@ -54,12 +54,10 @@
    routing-data
    handle))
 
-(defn callback [f]
-  f)
-
 (defn main []
   (let [staticFolder (if-let [STATIC (m/env-var "STATIC")] STATIC "static")
-        portNumber (if-let [PORT (m/env-var "PORT")] PORT 8080)]
+        portNumber   (if-let [PORT (m/env-var "PORT")] PORT 8080)
+        mongo-uri    (m/env-var "DATA_SOURCE")]
     (log/debug "Static Folder: " staticFolder)
     (log/debug "Port Number: " portNumber)
     (-> (ex/app)
@@ -73,12 +71,10 @@
         (ex/with-middleware "/" routes)
         (ex/listen portNumber))
     (do
-      (mg/connect "mongodb+srv://admin:50-Dt-20@clustered-6gtp5.gcp.mongodb.net/test?retryWrites=true&w=majority"
-                  (clj->js {:useNewUrlParser true :useUnifiedTopology true}))
+      (mg/connect mongo-uri (clj->js {:useNewUrlParser true :useUnifiedTopology true}))
       (-> (mg/db)
-          (mg/on "error" (fn [] (log/debug "connection error")))
-          (mg/once "open" (fn [] (log/debug "connection success")))))
-    ))
+          (mg/on "error" (fn [] (log/debug "ERROR::: Connection to data source could not be established.")))
+          (mg/once "open" (fn [] (db/connection-handler)))))))
 
 (set! *main-cli-fn* main)
 

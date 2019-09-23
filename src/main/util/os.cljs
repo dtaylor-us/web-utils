@@ -8,12 +8,12 @@
 ;;   (let [e (js->clj (aget nodejs/process "env"))]
 ;;     (or (get e k) (throw (str "missing key " k)))))
 
-;; (defn env
-;;   "Returns the value of the environment variable k,
-;;     or raises if k is missing from the environment."
-;;   [k]
-;;   (let [e (js->clj (aget nodejs/process "env"))]
-;;     (or (get e k) nil)))
+ (defn env
+   "Returns the value of the environment variable k,
+     or raises if k is missing from the environment."
+   [k]
+   (let [e (js->clj (aget nodejs/process "env"))]
+     (or (get e k) nil)))
 
 (defn trap
   "Trap the Unix signal sig with the given function."
